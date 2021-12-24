@@ -148,6 +148,9 @@ def choose_unlockable(simulation, unlockable, unlocks):
         return random.choice(available)
 
 def run_one_simulation(base, choices, sim, simulation):
+    report = {"choices": []}
+    for r in sim["reports"]:
+        report[r["label"]] = []
     print("----------")
     found = [choices[k] for k in base["initial"].keys()]
     unlocks = []
@@ -162,6 +165,17 @@ def run_one_simulation(base, choices, sim, simulation):
         next_unlock = choose_unlockable(simulation, unlockables, unlocks)
         print("Next unlock chosen: " + next_unlock)
         unlocks.append(next_unlock)
+        report["choices"].append(next_unlock)
+        for r in sim["reports"]:
+            if r["type"] == "qualitative":
+                for cat in r["categories"].keys():
+                    # only one condition
+                    if "type" in r["categories"][cat]:
+                        if r["categories"][cat]["type"] == "made-choice" and r["categories"][cat]["choice"] == next_unlock:
+                            report[r["label"]].append(cat)
+                    # and-ed/or-ed conditions
+                    else:
+                        pass
         (found, unlocks, unlockables) = update_lists(base, choices, found, unlocks, unlockables)
         print("----------")
         print("Available unlocks: " + ", ".join(set(unlockables) - set(unlocks)))
@@ -169,6 +183,7 @@ def run_one_simulation(base, choices, sim, simulation):
         print("Already found: " + ", ".join(found))
     print("Finished!")
     print("----------")
+    return report
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simulate playing through a randomized game, gathering statistics.")
@@ -190,25 +205,17 @@ if __name__ == "__main__":
             with open(fname, 'r') as f:
                 choices = parse_file(f)
             summarize_options(base, choices=choices)
-            for simulation in sim["simulations"]:
-                run_one_simulation(base, choices, sim, simulation)
-            #print("----------")
-            #found = [choices[k] for k in base["initial"].keys()]
-            #unlocks = []
-            #unlockables = []
-            #(found, unlocks, unlockables) = update_lists(base, choices, found, unlocks, unlockables)
-            #print("----------")
-            #print("Available unlocks: " + ", ".join(set(unlockables) - set(unlocks)))
-            #print("Already unlocked: " + ", ".join(unlocks))
-            #print("Already found: " + ", ".join(found))
-            #while len([e for e in sim["end-states"] if e in unlocks]) == 0:
-            #    print("----------")
-            #    next_unlock = choose_unlockable(sim["simulations"][0], unlockables, unlocks)
-            #    #next_unlock = random.choice(list(set(unlockables) - set(unlocks)))
-            #    print("Next unlock chosen: " + next_unlock)
-            #    unlocks.append(next_unlock)
-            #    (found, unlocks, unlockables) = update_lists(base, choices, found, unlocks, unlockables)
-            #    print("----------")
-            #    print("Available unlocks: " + ", ".join(set(unlockables) - set(unlocks)))
-            #    print("Already unlocked: " + ", ".join(unlocks))
-            #    print("Already found: " + ", ".join(found))
+            reps = {}
+            for s in range(len(sim["simulations"])):
+                simulation = sim["simulations"][s]
+                skey = simulation.get("label", str(s))
+                reps[skey] = reps.get(skey, {})
+                for r in sim["reports"]:
+                    reps[skey][r["label"]] = []
+                for i in range(simulation.get("count", 1)):
+                    rep = run_one_simulation(base, choices, sim, simulation)
+                    print(rep)
+                    reps[skey][i] = rep
+                    for r in sim["reports"]:
+                        reps[skey][r["label"]].append(rep[r["label"]])
+            print(reps)
