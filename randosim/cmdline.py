@@ -2,7 +2,7 @@ import argparse
 import json
 
 from . import summary
-from . import run
+from . import simulation
 from .parse_file import parse_file
 
 def cmdline():
@@ -20,7 +20,6 @@ def cmdline():
     if len(args.choices) == 0:
         summary.summarize_options(base)
     else:
-        reps = {}
-        for fname in args.choices:
-            reps[fname] = run.run(fname, base, sim)
-        print(reps)
+        simulator = simulation.RandomizerSimulator(args.choices, base, sim)
+        simulator.run()
+        print(simulator.reports)

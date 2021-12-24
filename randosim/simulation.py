@@ -162,22 +162,77 @@ def run_one_simulation(base, choices, sim, simulation):
     print("----------")
     return report
 
-def run(fname, base, sim):
-    print("Summary of " + fname + ":")
-    with open(fname, 'r') as f:
-        choices = parse_file(f)
-    summary.summarize_options(base, choices=choices)
-    reps = {}
-    for s in range(len(sim["simulations"])):
-        simulation = sim["simulations"][s]
-        skey = simulation.get("label", str(s))
-        reps[skey] = reps.get(skey, {})
-        for r in sim["reports"]:
-            reps[skey][r["label"]] = []
-        for i in range(simulation.get("count", 1)):
-            rep = run_one_simulation(base, choices, sim, simulation)
-            print(rep)
-            reps[skey][i] = rep
-            for r in sim["reports"]:
-                reps[skey][r["label"]].append(rep[r["label"]])
-    return reps
+class SimulationSingle:
+    def __init__(self, base, sim, simulation, choices, opts={}):
+        self.reports = {}
+        self.base = base
+        self.sim = sim
+        self.simulation = simulation
+        self.choices = choices
+        self.opts = opts
+
+    def run(self):
+        self.reports = run_one_simulation(self.base, self.choices, self.sim, self.simulation)
+
+class SimulationRun:
+    def __init__(self, base, sim, simulation, choices, opts={}):
+        self.reports = {}
+        self.base = base
+        self.sim = sim
+        self.simulation = simulation
+        self.choices = choices
+        self.opts = opts
+        self.label = self.simulation.get("label", str(self.sim["simulations"].index(self.simulation)))
+
+    def run(self):
+        #simulation_label = self.simulation.get("label", str(self.sim["simulations"].index(simulation)))
+        #self.reports[simulation_label] = self.reports.get(simulation_label, {})
+        for r in self.sim["reports"]:
+            self.reports[r["label"]] = []
+        for i in range(self.simulation.get("count", 1)):
+            run = SimulationSingle(self.base, self.sim, self.simulation, self.choices)
+            run.run()
+            print(run.reports)
+            self.reports[i] = run.reports
+            for r in self.sim["reports"]:
+                self.reports[r["label"]].append(run.reports[r["label"]])
+
+class FileSimulator:
+    def __init__(self, fname, base, sim, opts={}):
+        self.reports = {}
+        self.fname = fname
+        self.base = base
+        self.sim = sim
+        self.opts = opts
+        with open(fname, 'r') as f:
+            self.choices = parse_file(f)
+        if opts.get("summarize", True):
+            summary.summarize_options(self.base, choices=self.choices)
+
+    def simulation(self, index):
+        return SimulationRun(self.base, self.sim, self.sim["simulations"][index], self.choices, self.opts)
+
+    def run(self):
+        for s in range(len(self.sim["simulations"])):
+            simulation = self.simulation(s)
+            label = simulation.label
+            simulation.run()
+            self.reports[label] = simulation.reports
+
+class RandomizerSimulator:
+    def __init__(self, choice_files, base, sim, opts={}):
+        self.reports = {}
+        self.filenames = choice_files
+        self.base = base
+        self.sim = sim
+        self.opts = opts
+
+    def file_simulator(self, file_index):
+        return FileSimulator(self.filenames[file_index], self.base, self.sim, self.opts)
+
+    def run(self):
+        for file_index in range(len(self.filenames)):
+            fname = self.filenames[file_index]
+            file_simulator = self.file_simulator(file_index)
+            file_simulator.run()
+            self.reports[fname] = file_simulator.reports
