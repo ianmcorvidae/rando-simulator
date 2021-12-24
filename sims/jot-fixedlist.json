@@ -1,0 +1,5 @@
+{"version": 1,
+ "simulations": [{"type": "weighted-random", "first-choices": ["black_omen", "ocean_palace", "tyrano_lair", "magus_castle", "carpenter", "snail_stop", "cathedral", "castle", "burrow_left", "forged_masamune", "burrow", "zenan", "reptite_lair", "dactyl_nest", "desert", "heckran", "denadoro", "giants_claw", "proto_dome", "arris_dome", "sun_palace", "trial", "sunstone", "geno_dome", "mt_woe"], "label": "Fixed Order"}],
+ "end-states": ["black_omen", "ocean_palace"],
+ "reports": [{"label": "Go Mode", "type": "qualitative", "categories": {"tyrano": {"type": "made-choice", "choice": "tyrano_lair"}, "magus": {"type": "made-choice", "choice": "magus_castle"}, "omen": {"type": "made-choice", "choice": "black_omen"}}}]
+}
