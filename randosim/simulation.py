@@ -4,6 +4,32 @@ import copy
 from . import summary
 from .parse_file import parse_file
 
+### Making choices
+
+class WeightedRandomSimulation:
+    def __init__(self, simulation):
+        self.first_choices = simulation.get('first-choices', [])
+        self.weights = simulation.get('weights', {})
+    def choose(self, available):
+        for choice in self.first_choices:
+            if choice in available:
+                print(">> found first-choice option: " + choice)
+                return choice
+        if len(self.weights.keys()) == 0:
+            return random.choice(available)
+        else:
+            weights = [self.weights.get(w, 1) for w in available]
+            return random.choices(available, weights=weights)[0]
+
+def choose_unlockable(simulation, unlockable, unlocks):
+    available = list(set(unlockable) - set(unlocks))
+    sim = WeightedRandomSimulation(simulation)
+    if simulation.get('type', 'weighted-random') == 'weighted-random':
+        sim = WeightedRandomSimulation(simulation)
+    return sim.choose(available)
+
+### Checking unlockable requirements
+
 def meets_and_req(req, unlocks, found):
     met_reqs = []
     for r in req:
@@ -65,6 +91,7 @@ def find_unlockables(base, unlocks, found):
             u.append(unlockable_name)
     return u
 
+### automatic unlocks
 def findable_unlocks(base, found, unlocks):
     u = []
     for f_name in found:
@@ -77,6 +104,7 @@ def findable_unlocks(base, found, unlocks):
             u.extend(unlock_obj["unlocks"])
     return u
 
+### findables that have been found
 def found_findables(base, choices, unlocks):
     return [choices[k] for k in base["initial"].keys()] + [choices[k] for k in unlocks if k in choices]
 
@@ -112,17 +140,6 @@ def update_lists(base, choices, found, unlocks, unlockables):
         (f, u1, u2) = update_lists(base, choices, f, u1, u2)
 
     return (f, u1, u2)
-
-def choose_unlockable(simulation, unlockable, unlocks):
-    available = list(set(unlockable) - set(unlocks))
-    if simulation.get('type', 'weighted-random') == 'weighted-random':
-        # check first-choices
-        for choice in simulation.get('first-choices', []):
-            if choice in available:
-                print(">> found first-choice option: " + choice)
-                return choice
-        # then choose randomly
-        return random.choice(available)
 
 def run_one_simulation(base, choices, sim, simulation):
     report = {"choices": []}
