@@ -180,4 +180,4 @@ def run(fname, base, sim):
             reps[skey][i] = rep
             for r in sim["reports"]:
                 reps[skey][r["label"]].append(rep[r["label"]])
-    print(reps)
+    return reps

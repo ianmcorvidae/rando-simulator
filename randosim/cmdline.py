@@ -20,5 +20,7 @@ def cmdline():
     if len(args.choices) == 0:
         summary.summarize_options(base)
     else:
+        reps = {}
         for fname in args.choices:
-            run.run(fname, base, sim)
+            reps[fname] = run.run(fname, base, sim)
+        print(reps)
