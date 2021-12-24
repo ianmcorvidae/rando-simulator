@@ -20,6 +20,8 @@ findables are key items and characters in JoT; unlockables are dungeons/key item
 
 These files are the most simple. They should be a JSON file with a single one-level object mapping keys of locations (unlockable & initial) to keys of findables.
 
+Also, version: 1. Don't name locations `version`.
+
 ### Simulation file ###
 
 This file describes the simulation or simulations to run, and what information to collect.
@@ -52,6 +54,20 @@ We can automatically aggregate for now, just totals and percentages.
 
 So overall:
 
+ * version: 1
  * simulations: list of dictionaries, each of which is a simulation strategy identified by a `type` key (plus optional arguments and `count` and/or `label` if desired)
  * end-states: list of end-state unlockables
  * reports: list of dictionaries, each of which is a report identified by `type` and requiring a `label`, plus arguments to calculate with
+
+## Algorithm ##
+
+Roughly, of course.
+
+ * read base and simulation files
+ * initialize record-keeping based on `reports` in simulation file
+ * for each choices file:
+   * read file, initialize lists of unlockables/findables based on `initial` setting and random choices (available unlockables, unlocked unlockables, and found findables)
+   * repeatedly:
+     * check win conditions and reports, update or finish as needed
+     * make a choice based on simulation parameters and available unlockables
+ * aggregate reports information
