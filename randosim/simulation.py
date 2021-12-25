@@ -57,57 +57,6 @@ def meets_or_req(req, unlocks, found):
                 break
     return met_req
 
-def find_unlockables(base, unlocks, found):
-    u = []
-    for unlockable_name in base["unlockables"].keys():
-        unlockable = base["unlockables"][unlockable_name]
-        if 'requirements' in unlockable:
-            req = unlockable["requirements"]
-            if isinstance(req, str) and ((req in unlocks) or (req in found)):
-                #print(">> " + unlockable_name + " requires only " + req + " which we have, adding")
-                u.append(unlockable_name)
-            elif isinstance(req, list):
-                if meets_and_req(req, unlocks, found):
-                    #print(">> " + unlockable_name + " requires " + ", ".join(req) + " which we have, adding")
-                    u.append(unlockable_name)
-            elif isinstance(req, dict):
-                if ("and" in req) and ("or" not in req):
-                    # and-only, probably with nested or
-                    if meets_and_req(req["and"], unlocks, found):
-                        #print(">> " + unlockable_name, req)
-                        u.append(unlockable_name)
-                elif ("or" in req) and ("and" not in req):
-                    # or-only, maybe with nested ands
-                    if meets_or_req(req["or"], unlocks, found):
-                        #print(">> " + unlockable_name, req)
-                        u.append(unlockable_name)
-                elif ("or" in req) and ("and" in req):
-                    # both parts
-                    if meets_and_req(req["and"], unlocks, found) and meets_or_req(req["or"], unlocks, found):
-                        #print(">> " + unlockable_name, req)
-                        u.append(unlockable_name)
-        else:
-            #print(">> " + unlockable_name + " has no requirements, adding")
-            u.append(unlockable_name)
-    return u
-
-### automatic unlocks
-def findable_unlocks(base, found, unlocks):
-    u = []
-    for f_name in found:
-        found_obj = base["findables"].get(f_name, {})
-        if "unlocks" in found_obj:
-            u.extend(found_obj["unlocks"])
-    for u_name in unlocks:
-        unlock_obj = base["unlockables"].get(u_name, {})
-        if "unlocks" in unlock_obj:
-            u.extend(unlock_obj["unlocks"])
-    return u
-
-### findables that have been found
-def found_findables(base, choices, unlocks):
-    return [choices[k] for k in base["initial"].keys()] + [choices[k] for k in unlocks if k in choices]
-
 class QualitativeReport:
     def __init__(self, label, categories):
         self.label = label
@@ -203,19 +152,68 @@ class SimulationSingle:
         print("Already unlocked: " + ", ".join(self.unlocks))
         print("Already found: " + ", ".join(self.found))
 
+    def _found_findables(self, unlocks):
+        return [self.choices[k] for k in self.base["initial"].keys()] + [self.choices[k] for k in unlocks if k in self.choices]
+
+    def _findable_unlocks(self, found, unlocks):
+        u = []
+        for f_name in found:
+            found_obj = self.base["findables"].get(f_name, {})
+            if "unlocks" in found_obj:
+                u.extend(found_obj["unlocks"])
+        for u_name in unlocks:
+            unlock_obj = self.base["unlockables"].get(u_name, {})
+            if "unlocks" in unlock_obj:
+                u.extend(unlock_obj["unlocks"])
+        return u
+
+    def _find_unlockables(self, unlocks, found):
+        u = []
+        for unlockable_name in self.base["unlockables"].keys():
+            unlockable = self.base["unlockables"][unlockable_name]
+            if 'requirements' in unlockable:
+                req = unlockable["requirements"]
+                if isinstance(req, str) and ((req in unlocks) or (req in found)):
+                    #print(">> " + unlockable_name + " requires only " + req + " which we have, adding")
+                    u.append(unlockable_name)
+                elif isinstance(req, list):
+                    if meets_and_req(req, unlocks, found):
+                        #print(">> " + unlockable_name + " requires " + ", ".join(req) + " which we have, adding")
+                        u.append(unlockable_name)
+                elif isinstance(req, dict):
+                    if ("and" in req) and ("or" not in req):
+                        # and-only, probably with nested or
+                        if meets_and_req(req["and"], unlocks, found):
+                            #print(">> " + unlockable_name, req)
+                            u.append(unlockable_name)
+                    elif ("or" in req) and ("and" not in req):
+                        # or-only, maybe with nested ands
+                        if meets_or_req(req["or"], unlocks, found):
+                            #print(">> " + unlockable_name, req)
+                            u.append(unlockable_name)
+                    elif ("or" in req) and ("and" in req):
+                        # both parts
+                        if meets_and_req(req["and"], unlocks, found) and meets_or_req(req["or"], unlocks, found):
+                            #print(">> " + unlockable_name, req)
+                            u.append(unlockable_name)
+            else:
+                #print(">> " + unlockable_name + " has no requirements, adding")
+                u.append(unlockable_name)
+        return u
+
     def _updated_lists(self, found, unlocks, unlockables):
         f = copy.copy(found)
         u1 = copy.copy(unlocks)
         u2 = copy.copy(unlockables)
 
-        u1.extend(findable_unlocks(self.base, found, unlocks))
+        u1.extend(self._findable_unlocks(found, unlocks))
         u1 = list(set(u1))
         changed_u1 = (len(u1) != len(unlocks))
 
-        u2 = find_unlockables(self.base, unlocks, found)
+        u2 = self._find_unlockables(unlocks, found)
         changed_u2 = (len(u2) != len(unlockables))
 
-        f = found_findables(self.base, self.choices, unlocks)
+        f = self._found_findables(unlocks)
         changed_f = (len(f) != len(found))
 
         if self.opts.get("summarize", True):
