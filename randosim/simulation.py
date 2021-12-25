@@ -147,10 +147,9 @@ class SimulationSingle:
         self.reports["choice_count"] = len(self.reports.get("choices", []))
 
     def summarize(self):
-        print("----------")
-        print("Available unlocks: " + ", ".join(set(self.unlockables) - set(self.unlocks)))
-        print("Already unlocked: " + ", ".join(self.unlocks))
-        print("Already found: " + ", ".join(self.found))
+        print("Available: " + ", ".join(set(self.unlockables) - set(self.unlocks)))
+        print("Done:      " + ", ".join(self.unlocks))
+        print("Found:     " + ", ".join(self.found))
 
     def _found_findables(self, unlocks):
         return [self.choices[k] for k in self.base["initial"].keys()] + [self.choices[k] for k in unlocks if k in self.choices]
@@ -219,18 +218,18 @@ class SimulationSingle:
         if self.opts.get("summarize", True):
             if changed_u1:
                 new = set(u1) - set(unlocks)
-                print("New unlocks found: " + ", ".join(new))
+                print("New unlocks:     " + ", ".join(new))
 
             if changed_u2:
                 new = set(u2) - set(unlockables)
-                print("New unlockables found: " + ", ".join(new))
+                print("New unlockables: " + ", ".join(new))
 
             if changed_f:
                 new = set(f) - set(found)
-                print("New findables found: " + ", ".join(new))
+                print("New findables:   " + ", ".join(new))
 
         if changed_u1 or changed_u2 or changed_f:
-            print("~~~~~ recursing")
+            print("  ...")
             (f, u1, u2) = self._updated_lists(f, u1, u2)
 
         return (f, u1, u2)
@@ -252,7 +251,7 @@ class SimulationSingle:
         while len([e for e in self.sim["end-states"] if e in self.unlocks]) == 0:
             print("----------")
             next_unlock = self.choose_unlockable()
-            print("Next unlock chosen: " + next_unlock)
+            print("Next unlock: " + next_unlock)
             self.unlocks.append(next_unlock)
             self.reports["choices"].append(next_unlock)
             for hook in self.reporting_hooks['made-choice']:
@@ -260,8 +259,7 @@ class SimulationSingle:
             self.update_lists()
             if self.opts.get("summarize", True):
                 self.summarize()
-        print("Finished!")
-        print("----------")
+        print("==========")
         self._update_choice_count()
 
 class SimulationRun:
@@ -282,7 +280,7 @@ class SimulationRun:
         for i in range(self.simulation.get("count", 1)):
             run = SimulationSingle(self.base, self.sim, self.simulation, self.choices, self.opts)
             run.run()
-            print(run.reports)
+            #print(run.reports)
             self.reports[i] = run.reports
             for r in self.sim["reports"]:
                 self.reports[r["label"]].append(run.reports[r["label"]])
