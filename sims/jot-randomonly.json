@@ -1,5 +1,5 @@
 {"version": 1,
  "simulations": [{"type": "weighted-random", "first-choices": ["cathedral", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 20}],
  "end-states": ["black_omen", "ocean_palace"],
- "reports": [{"label": "Go Mode", "type": "qualitative", "categories": {"tyrano": {"type": "made-choice", "choice": "tyrano_lair"}, "magus": {"type": "made-choice", "choice": "magus_castle"}, "omen": {"type": "made-choice", "choice": "black_omen"}}}]
+ "reports": [{"label": "Go Mode", "type": "qualitative", "categories": {"tyrano": {"and": [{"type": "made-choice", "choice": "tyrano_lair"}, {"type": "made-choice", "choice": "ocean_palace"}]}, "magus": {"type": "made-choice", "choice": "magus_castle"}, "omen": {"type": "made-choice", "choice": "black_omen"}}}]
 }

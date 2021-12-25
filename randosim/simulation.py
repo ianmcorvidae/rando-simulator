@@ -21,12 +21,12 @@ class WeightedRandomSimulation:
             weights = [self.weights.get(w, 1) for w in available]
             return random.choices(available, weights=weights)[0]
 
-def choose_unlockable(simulation, unlockable, unlocks):
-    available = list(set(unlockable) - set(unlocks))
-    sim = WeightedRandomSimulation(simulation)
-    if simulation.get('type', 'weighted-random') == 'weighted-random':
-        sim = WeightedRandomSimulation(simulation)
-    return sim.choose(available)
+def get_sim(simulation):
+    if simulation.get('type', 'weighted-random') in ['weighted-random', 'random', 'fixed-list']:
+        return WeightedRandomSimulation(simulation)
+    else:
+        return WeightedRandomSimulation(simulation)
+
 
 ### Checking unlockable requirements
 
@@ -108,88 +108,163 @@ def findable_unlocks(base, found, unlocks):
 def found_findables(base, choices, unlocks):
     return [choices[k] for k in base["initial"].keys()] + [choices[k] for k in unlocks if k in choices]
 
-def update_lists(base, choices, found, unlocks, unlockables):
-    f = copy.copy(found)
-    u1 = copy.copy(unlocks)
-    u2 = copy.copy(unlockables)
+class QualitativeReport:
+    def __init__(self, label, categories):
+        self.label = label
+        self.categories = categories
+        self.choices = []
+        self.founds = []
 
-    u1.extend(findable_unlocks(base, found, unlocks))
-    u1 = list(set(u1))
-    changed_u1 = (len(u1) != len(unlocks))
+    def condition_matches(self, condition):
+        if condition["type"] == "made-choice":
+            return (condition["choice"] in self.choices)
+        elif condition["type"] == "got-findable":
+            return (condition["findable"] in self.founds)
+        else:
+            print("Unknown condition type", condition["type"])
+            return False
 
-    u2 = find_unlockables(base, unlocks, found)
-    changed_u2 = (len(u2) != len(unlockables))
+    def category_matches(self, category):
+        if "type" in category:
+            category = {"and": [category]}
+        if "and" in category:
+            # loop over all of them, return false if any returns false
+            for c in category["and"]:
+                if not self.condition_matches(c):
+                    return False
+        if "and_not" in category:
+            # loop over all of them, return false if any returns true
+            for c in category["and"]:
+                if self.condition_matches(c):
+                    return False
 
-    f = found_findables(base, choices, unlocks)
-    changed_f = (len(f) != len(found))
+        if "or" in category: # eh, we'll not bother with or_not for now
+            # return true on first match
+            for c in category["or"]:
+                if self.condition_matches(c):
+                    return True
+            return False # if we got here, we checked all the ors and got none
+        else:
+            # there is no 'or', so if we got here, all the ands matched
+            return True
 
-    if changed_u1:
-        new = set(u1) - set(unlocks)
-        print("New unlocks found: " + ", ".join(new))
+    def check_categories(self, reports):
+        for cat in self.categories.keys():
+            category = self.categories[cat]
+            if self.category_matches(category) and cat not in reports[self.label]:
+                reports[self.label].append(cat)
+        return reports
 
-    if changed_u2:
-        new = set(u2) - set(unlockables)
-        print("New unlockables found: " + ", ".join(new))
+    def made_choice(self, reports, choice_made):
+        self.choices.append(choice_made)
+        return self.check_categories(reports)
 
-    if changed_f:
-        new = set(f) - set(found)
-        print("New findables found: " + ", ".join(new))
-
-    if changed_u1 or changed_u2 or changed_f:
-        print("~~~~~ recursing")
-        (f, u1, u2) = update_lists(base, choices, f, u1, u2)
-
-    return (f, u1, u2)
-
-def run_one_simulation(base, choices, sim, simulation):
-    report = {"choices": []}
-    for r in sim["reports"]:
-        report[r["label"]] = []
-    print("----------")
-    found = [choices[k] for k in base["initial"].keys()]
-    unlocks = []
-    unlockables = []
-    (found, unlocks, unlockables) = update_lists(base, choices, found, unlocks, unlockables)
-    print("----------")
-    print("Available unlocks: " + ", ".join(set(unlockables) - set(unlocks)))
-    print("Already unlocked: " + ", ".join(unlocks))
-    print("Already found: " + ", ".join(found))
-    while len([e for e in sim["end-states"] if e in unlocks]) == 0:
-        print("----------")
-        next_unlock = choose_unlockable(simulation, unlockables, unlocks)
-        print("Next unlock chosen: " + next_unlock)
-        unlocks.append(next_unlock)
-        report["choices"].append(next_unlock)
-        for r in sim["reports"]:
-            if r["type"] == "qualitative":
-                for cat in r["categories"].keys():
-                    # only one condition
-                    if "type" in r["categories"][cat]:
-                        if r["categories"][cat]["type"] == "made-choice" and r["categories"][cat]["choice"] == next_unlock:
-                            report[r["label"]].append(cat)
-                    # and-ed/or-ed conditions
-                    else:
-                        pass
-        (found, unlocks, unlockables) = update_lists(base, choices, found, unlocks, unlockables)
-        print("----------")
-        print("Available unlocks: " + ", ".join(set(unlockables) - set(unlocks)))
-        print("Already unlocked: " + ", ".join(unlocks))
-        print("Already found: " + ", ".join(found))
-    print("Finished!")
-    print("----------")
-    return report
+    def found(self, reports, findable_found):
+        self.founds.append(findable_found)
+        return self.check_categories(reports)
 
 class SimulationSingle:
     def __init__(self, base, sim, simulation, choices, opts={}):
-        self.reports = {}
+        self.reports = {"choices": [], "choice_count": 0}
         self.base = base
         self.sim = sim
         self.simulation = simulation
         self.choices = choices
         self.opts = opts
 
+        self.found = []
+        self.unlocks = []
+        self.unlockables = []
+
+        self.reporting_hooks = {'made-choice': [], 'found': []}
+
+        self._init_reports()
+        self._init_lists()
+        if opts.get("summarize", True):
+            self.summarize() 
+
+    def _init_reports(self):
+        for r in self.sim["reports"]:
+            self.reports[r["label"]] = self.reports.get(r["label"],[])
+            if r["type"] == "qualitative":
+                self.reporting_hooks["made-choice"].append(QualitativeReport(r["label"], r["categories"]))
+                self.reporting_hooks["found"].append(QualitativeReport(r["label"], r["categories"]))
+
+    def _init_lists(self):
+        self.found = [self.choices[k] for k in self.base["initial"].keys()]
+        self.update_lists()
+
+    def _update_choice_count(self):
+        self.reports["choice_count"] = len(self.reports.get("choices", []))
+
+    def summarize(self):
+        print("----------")
+        print("Available unlocks: " + ", ".join(set(self.unlockables) - set(self.unlocks)))
+        print("Already unlocked: " + ", ".join(self.unlocks))
+        print("Already found: " + ", ".join(self.found))
+
+    def _updated_lists(self, found, unlocks, unlockables):
+        f = copy.copy(found)
+        u1 = copy.copy(unlocks)
+        u2 = copy.copy(unlockables)
+
+        u1.extend(findable_unlocks(self.base, found, unlocks))
+        u1 = list(set(u1))
+        changed_u1 = (len(u1) != len(unlocks))
+
+        u2 = find_unlockables(self.base, unlocks, found)
+        changed_u2 = (len(u2) != len(unlockables))
+
+        f = found_findables(self.base, self.choices, unlocks)
+        changed_f = (len(f) != len(found))
+
+        if self.opts.get("summarize", True):
+            if changed_u1:
+                new = set(u1) - set(unlocks)
+                print("New unlocks found: " + ", ".join(new))
+
+            if changed_u2:
+                new = set(u2) - set(unlockables)
+                print("New unlockables found: " + ", ".join(new))
+
+            if changed_f:
+                new = set(f) - set(found)
+                print("New findables found: " + ", ".join(new))
+
+        if changed_u1 or changed_u2 or changed_f:
+            print("~~~~~ recursing")
+            (f, u1, u2) = self._updated_lists(f, u1, u2)
+
+        return (f, u1, u2)
+
+    def update_lists(self):
+        (f, u1, u2) = self._updated_lists(self.found, self.unlocks, self.unlockables)
+        if len(f) != len(self.found):
+            for hook in self.reporting_hooks['found']:
+                for findable in list(set(f) - set(self.found)):
+                    self.reports = hook.found(self.reports, findable)
+        (self.found, self.unlocks, self.unlockables) = (f, u1, u2)
+
+    def choose_unlockable(self):
+        available = list(set(self.unlockables) - set(self.unlocks))
+        sim = get_sim(self.simulation)
+        return sim.choose(available)
+
     def run(self):
-        self.reports = run_one_simulation(self.base, self.choices, self.sim, self.simulation)
+        while len([e for e in self.sim["end-states"] if e in self.unlocks]) == 0:
+            print("----------")
+            next_unlock = self.choose_unlockable()
+            print("Next unlock chosen: " + next_unlock)
+            self.unlocks.append(next_unlock)
+            self.reports["choices"].append(next_unlock)
+            for hook in self.reporting_hooks['made-choice']:
+                self.reports = hook.made_choice(self.reports, next_unlock)
+            self.update_lists()
+            if self.opts.get("summarize", True):
+                self.summarize()
+        print("Finished!")
+        print("----------")
+        self._update_choice_count()
 
 class SimulationRun:
     def __init__(self, base, sim, simulation, choices, opts={}):
@@ -207,7 +282,7 @@ class SimulationRun:
         for r in self.sim["reports"]:
             self.reports[r["label"]] = []
         for i in range(self.simulation.get("count", 1)):
-            run = SimulationSingle(self.base, self.sim, self.simulation, self.choices)
+            run = SimulationSingle(self.base, self.sim, self.simulation, self.choices, self.opts)
             run.run()
             print(run.reports)
             self.reports[i] = run.reports
