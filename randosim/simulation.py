@@ -59,6 +59,7 @@ def meets_or_req(req, unlocks, found):
 
 class QualitativeReport:
     def __init__(self, label, categories):
+        self.supported_hooks = ['made-choice', 'found']
         self.label = label
         self.categories = categories
         self.choices = []
@@ -112,7 +113,19 @@ class QualitativeReport:
         self.founds.append(findable_found)
         return self.check_categories(reports)
 
-    def summarize_run(self, raw_data):
+    def combine_simulations(self, reports, label):
+        data = []
+        for sim in reports["simulations"].keys():
+            data.extend(reports["simulations"][sim]["raw"][label])
+        return data
+
+    def combine_files(self, reports, report_label, simulation_label):
+        data = []
+        for f in reports["files"].keys():
+            data.extend(reports["files"][f]["raw"][report_label])
+        return data
+
+    def summarize_raw_data(self, raw_data):
         summary = {}
         summary["all_seen"] = []
         summary["individual_percentages"] = {}
@@ -126,9 +139,17 @@ class QualitativeReport:
         summary["all_seen"] = list(set(summary["all_seen"]))
         for category in summary["individual_percentages"].keys():
             summary["individual_percentages"][category] = summary["individual_percentages"][category] / count
+        summary["individual_percentages_sum"] = sum(summary["individual_percentages"].values())
         for category in summary["joint_percentages"].keys():
             summary["joint_percentages"][category] = summary["joint_percentages"][category] / count
+        summary["joint_percentages_sum"] = sum(summary["joint_percentages"].values())
         return summary
+
+
+def get_report(report):
+    if report.get('type', None) == "qualitative":
+        return QualitativeReport(report["label"], report["categories"])
+    return None
 
 class SimulationSingle:
     def __init__(self, base, sim, simulation, choices, opts={}):
@@ -153,9 +174,10 @@ class SimulationSingle:
     def _init_reports(self):
         for r in self.sim["reports"]:
             self.reports[r["label"]] = self.reports.get(r["label"],[])
-            if r["type"] == "qualitative":
-                self.reporting_hooks["made-choice"].append(QualitativeReport(r["label"], r["categories"]))
-                self.reporting_hooks["found"].append(QualitativeReport(r["label"], r["categories"]))
+            report = get_report(r)
+            for hook_type in self.reporting_hooks.keys():
+                if hook_type in report.supported_hooks:
+                    self.reporting_hooks[hook_type].append(get_report(r))
 
     def _init_lists(self):
         self.found = [self.choices[k] for k in self.base["initial"].keys()]
@@ -283,6 +305,9 @@ class SimulationSingle:
         print("==========")
         self._update_choice_count()
 
+def simulation_label(simulation, sim):
+    return simulation.get("label", str(sim["simulations"].index(simulation)))
+
 class SimulationRun:
     def __init__(self, base, sim, simulation, choices, opts={}):
         self.reports = {"raw": {}, "summary": {}}
@@ -291,7 +316,7 @@ class SimulationRun:
         self.simulation = simulation
         self.choices = choices
         self.opts = opts
-        self.label = self.simulation.get("label", str(self.sim["simulations"].index(self.simulation)))
+        self.label = simulation_label(self.simulation, self.sim)
 
     def run(self):
         #simulation_label = self.simulation.get("label", str(self.sim["simulations"].index(simulation)))
@@ -304,17 +329,19 @@ class SimulationRun:
             #print(run.reports)
             self.reports[i] = run.reports
             for r in self.sim["reports"]:
+                # raw data across all runs of a simulation in a single file
+                # [raw][<report label>]
                 self.reports["raw"][r["label"]].append(run.reports[r["label"]])
         for r in self.sim["reports"]:
-            summarizer = None
-            if r["type"] == "qualitative":
-                summarizer = QualitativeReport(r["label"], r["categories"])
+            summarizer = get_report(r)
             if summarizer is not None:
-                self.reports["summary"][r["label"]] = summarizer.summarize_run(self.reports["raw"][r["label"]])
+                # summary data across all runs of a single simulation in a single file
+                # [summary][<report label>]
+                self.reports["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["raw"][r["label"]])
 
 class FileSimulator:
     def __init__(self, fname, base, sim, opts={}):
-        self.reports = {"simulations": {}}
+        self.reports = {"simulations": {}, "raw": {}, "summary": {}}
         self.fname = fname
         self.base = base
         self.sim = sim
@@ -333,10 +360,17 @@ class FileSimulator:
             label = simulation.label
             simulation.run()
             self.reports["simulations"][label] = simulation.reports
+        for r in self.sim["reports"]:
+            summarizer = get_report(r)
+            if summarizer is not None:
+                # raw and summary data across all runs of _all_ simulations in a single file
+                # [raw][<report label>] and [summary][<report label>]
+                self.reports["raw"][r["label"]] = summarizer.combine_simulations(self.reports, r["label"])
+                self.reports["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["raw"][r["label"]])
 
 class RandomizerSimulator:
     def __init__(self, choice_files, base, sim, opts={}):
-        self.reports = {"files": {}}
+        self.reports = {"files": {}, "simulations": {}, "raw": {}, "summary": {}}
         self.filenames = choice_files
         self.base = base
         self.sim = sim
@@ -351,5 +385,20 @@ class RandomizerSimulator:
             file_simulator = self.file_simulator(file_index)
             file_simulator.run()
             self.reports["files"][fname] = file_simulator.reports
-
-
+        for sl in [simulation_label(simulation, self.sim) for simulation in self.sim["simulations"]]:
+            self.reports["simulations"][sl] = {"raw": {}, "summary": {}}
+        for r in self.sim["reports"]:
+            summarizer = get_report(r)
+            if summarizer is not None:
+                # raw and summary data across all runs of each simulation, across all files
+                # [simulations][<simulation identifier>][raw][<report label>] and [summary][<report label>]
+                for s in range(len(self.sim["simulations"])):
+                    simulation = self.sim["simulations"][s]
+                    label = simulation_label(simulation, self.sim)
+                    self.reports["simulations"][label]["raw"][r["label"]] = summarizer.combine_files(self.reports, r["label"], label)
+                    self.reports["simulations"][label]["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["simulations"][label]["raw"][r["label"]])
+                    #print("would combine across files for simulation here", label, r["label"])
+                # raw and summary data across all runs of all simulations across all files
+                # [raw][<report label>] and [summary][<report label>]
+                self.reports["raw"][r["label"]] = summarizer.combine_simulations(self.reports, r["label"])
+                self.reports["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["raw"][r["label"]])

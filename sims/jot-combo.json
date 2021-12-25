@@ -1,0 +1,23 @@
+{"version": 1,
+ "simulations": [
+	 {"type": "weighted-random", "first-choices": ["black_omen", "ocean_palace", "tyrano_lair", "magus_castle", "carpenter", "snail_stop", "cathedral", "castle", "burrow_left", "forged_masamune", "burrow", "zenan", "reptite_lair", "dactyl_nest", "desert", "heckran", "denadoro", "giants_claw", "proto_dome", "arris_dome", "sun_palace", "trial", "sunstone", "geno_dome", "mt_woe"], "label": "Fixed Order"},
+	 {"type": "weighted-random", "first-choices": ["cathedral", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 20},
+	 {"type": "weighted-random", "label": "Pure Random", "count": 20},
+	 {"type": "weighted-random", "first-choices": ["cathedral"], "count": 20}
+ ],
+ "end-states": ["black_omen", "ocean_palace"],
+ "reports": [
+   {"label": "Go Mode",
+    "type": "qualitative",
+    "categories": {
+      "tyrano": {"and": [{"type": "made-choice", "choice": "tyrano_lair"}, {"type": "made-choice", "choice": "ocean_palace"}]},
+      "magus": {"and": [{"type": "made-choice", "choice": "magus_castle"}, {"type": "made-choice", "choice": "ocean_palace"}]},
+      "omen": {"type": "made-choice", "choice": "black_omen"}}},
+   {"label": "Go Mode Found",
+    "type": "qualitative",
+    "categories": {
+      "tyrano": {"and": [{"type": "got-findable", "findable": "gate_key"}, {"type": "got-findable", "findable": "ruby_knife"}, {"type": "got-findable", "findable": "dreamstone"}]},
+      "magus": {"and": [{"type": "got-findable", "findable": "frog"}, {"type": "got-findable", "findable": "blade"}, {"type": "got-findable", "findable": "hilt"}]},
+      "omen": {"and": [{"type": "got-findable", "findable": "pendant"}, {"type": "got-findable", "findable": "chrono_trigger"}, {"type": "got-findable", "findable": "clone"}]}}}
+ ]
+}
