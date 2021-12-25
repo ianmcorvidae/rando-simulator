@@ -25,6 +25,9 @@ def cmdline():
         simulator.run()
         for f in simulator.reports["files"].keys():
             for s in simulator.reports["files"][f]["simulations"].keys():
+                #for k in simulator.reports["files"][f]["simulations"][s].keys():
+                #    if isinstance(k, int):
+                #        print(", ".join(simulator.reports["files"][f]["simulations"][s][k]["choices"]), simulator.reports["files"][f]["simulations"][s][k]["Go Mode"])
                 for r in simulator.reports["files"][f]["simulations"][s]["summary"].keys():
                     print(f + "\t" + s + "\t" + r)
                     pprint.pprint(simulator.reports["files"][f]["simulations"][s]["summary"][r], compact=True)

@@ -5,8 +5,8 @@
    {"label": "Go Mode",
     "type": "qualitative",
     "categories": {
-      "tyrano": {"and": [{"type": "made-choice", "choice": "tyrano_lair"}, {"type": "made-choice", "choice": "ocean_palace"}]},
-      "magus": {"and": [{"type": "made-choice", "choice": "magus_castle"}, {"type": "made-choice", "choice": "ocean_palace"}]},
+      "tyrano": {"and": [{"type": "made-choice", "choice": "tyrano_lair"}, {"type": "made-choice", "choice": "ocean_palace"}, {"type": "got-findable", "findable": "ruby_knife"}]},
+      "magus": {"and": [{"type": "made-choice", "choice": "magus_castle"}, {"type": "made-choice", "choice": "ocean_palace"}], "or_not": [{"type": "got-findable", "findable": "ruby_knife"}, {"type": "made-choice", "choice": "tyrano_lair"}]},
       "omen": {"type": "made-choice", "choice": "black_omen"}}},
    {"label": "Go Mode Found",
     "type": "qualitative",

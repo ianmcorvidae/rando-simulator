@@ -88,10 +88,13 @@ class QualitativeReport:
                 if self.condition_matches(c):
                     return False
 
-        if "or" in category: # eh, we'll not bother with or_not for now
+        if "or" in category or "or_not" in category:
             # return true on first match
-            for c in category["or"]:
+            for c in category.get("or", []):
                 if self.condition_matches(c):
+                    return True
+            for c in category.get("or_not", []):
+                if not self.condition_matches(c):
                     return True
             return False # if we got here, we checked all the ors and got none
         else:
@@ -177,7 +180,7 @@ class SimulationSingle:
             report = get_report(r)
             for hook_type in self.reporting_hooks.keys():
                 if hook_type in report.supported_hooks:
-                    self.reporting_hooks[hook_type].append(get_report(r))
+                    self.reporting_hooks[hook_type].append(report)
 
     def _init_lists(self):
         self.found = [self.choices[k] for k in self.base["initial"].keys()]
