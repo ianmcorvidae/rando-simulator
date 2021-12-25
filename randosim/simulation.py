@@ -112,6 +112,24 @@ class QualitativeReport:
         self.founds.append(findable_found)
         return self.check_categories(reports)
 
+    def summarize_run(self, raw_data):
+        summary = {}
+        summary["all_seen"] = []
+        summary["individual_percentages"] = {}
+        summary["joint_percentages"] = {}
+        count = len(raw_data)
+        for run in raw_data:
+            summary["all_seen"].extend(run)
+            summary["joint_percentages"][tuple(sorted(run))] = summary["joint_percentages"].get(tuple(sorted(run)), 0) + 1
+            for category in run:
+                summary["individual_percentages"][category] = summary["individual_percentages"].get(category, 0) + 1
+        summary["all_seen"] = list(set(summary["all_seen"]))
+        for category in summary["individual_percentages"].keys():
+            summary["individual_percentages"][category] = summary["individual_percentages"][category] / count
+        for category in summary["joint_percentages"].keys():
+            summary["joint_percentages"][category] = summary["joint_percentages"][category] / count
+        return summary
+
 class SimulationSingle:
     def __init__(self, base, sim, simulation, choices, opts={}):
         self.reports = {"choices": [], "choice_count": 0}
@@ -267,7 +285,7 @@ class SimulationSingle:
 
 class SimulationRun:
     def __init__(self, base, sim, simulation, choices, opts={}):
-        self.reports = {}
+        self.reports = {"raw": {}, "summary": {}}
         self.base = base
         self.sim = sim
         self.simulation = simulation
@@ -279,14 +297,20 @@ class SimulationRun:
         #simulation_label = self.simulation.get("label", str(self.sim["simulations"].index(simulation)))
         #self.reports[simulation_label] = self.reports.get(simulation_label, {})
         for r in self.sim["reports"]:
-            self.reports[r["label"]] = []
+            self.reports["raw"][r["label"]] = []
         for i in range(self.simulation.get("count", 1)):
             run = SimulationSingle(self.base, self.sim, self.simulation, self.choices, self.opts)
             run.run()
             #print(run.reports)
             self.reports[i] = run.reports
             for r in self.sim["reports"]:
-                self.reports[r["label"]].append(run.reports[r["label"]])
+                self.reports["raw"][r["label"]].append(run.reports[r["label"]])
+        for r in self.sim["reports"]:
+            summarizer = None
+            if r["type"] == "qualitative":
+                summarizer = QualitativeReport(r["label"], r["categories"])
+            if summarizer is not None:
+                self.reports["summary"][r["label"]] = summarizer.summarize_run(self.reports["raw"][r["label"]])
 
 class FileSimulator:
     def __init__(self, fname, base, sim, opts={}):
@@ -327,3 +351,5 @@ class RandomizerSimulator:
             file_simulator = self.file_simulator(file_index)
             file_simulator.run()
             self.reports["files"][fname] = file_simulator.reports
+
+
