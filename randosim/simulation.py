@@ -141,6 +141,9 @@ class SimulationSingle:
 
     def _init_lists(self):
         self.found = [self.choices[k] for k in self.base["initial"].keys()]
+        for hook in self.reporting_hooks['found']:
+            for findable in self.found:
+                self.reports = hook.found(self.reports, findable)
         self.update_lists()
 
     def _update_choice_count(self):
@@ -287,7 +290,7 @@ class SimulationRun:
 
 class FileSimulator:
     def __init__(self, fname, base, sim, opts={}):
-        self.reports = {}
+        self.reports = {"simulations": {}}
         self.fname = fname
         self.base = base
         self.sim = sim
@@ -305,11 +308,11 @@ class FileSimulator:
             simulation = self.simulation(s)
             label = simulation.label
             simulation.run()
-            self.reports[label] = simulation.reports
+            self.reports["simulations"][label] = simulation.reports
 
 class RandomizerSimulator:
     def __init__(self, choice_files, base, sim, opts={}):
-        self.reports = {}
+        self.reports = {"files": {}}
         self.filenames = choice_files
         self.base = base
         self.sim = sim
@@ -323,4 +326,4 @@ class RandomizerSimulator:
             fname = self.filenames[file_index]
             file_simulator = self.file_simulator(file_index)
             file_simulator.run()
-            self.reports[fname] = file_simulator.reports
+            self.reports["files"][fname] = file_simulator.reports

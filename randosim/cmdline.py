@@ -20,6 +20,7 @@ def cmdline():
     if len(args.choices) == 0:
         summary.summarize_options(base)
     else:
+        import pprint
         simulator = simulation.RandomizerSimulator(args.choices, base, sim)
         simulator.run()
-        print(simulator.reports)
+        pprint.pprint(simulator.reports)
