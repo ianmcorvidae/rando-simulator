@@ -127,20 +127,30 @@ class QualitativeReport:
         summary = {}
         summary["all_seen"] = []
         summary["individual_percentages"] = {}
+        summary["individual_counts"] = {}
         summary["joint_percentages"] = {}
+        summary["joint_counts"] = {}
+        summary["joint_ordered_percentages"] = {}
+        summary["joint_ordered_counts"] = {}
         count = len(raw_data)
         for run in raw_data:
             summary["all_seen"].extend(run)
-            summary["joint_percentages"]["::".join(sorted(run))] = summary["joint_percentages"].get("::".join(sorted(run)), 0) + 1
+            joint_key = "::".join(sorted(run))
+            summary["joint_counts"][joint_key] = summary["joint_counts"].get(joint_key, 0) + 1
+            ordered_key = "::".join(run)
+            summary["joint_ordered_counts"][ordered_key] = summary["joint_ordered_counts"].get(ordered_key, 0) + 1
             for category in run:
-                summary["individual_percentages"][category] = summary["individual_percentages"].get(category, 0) + 1
+                summary["individual_counts"][category] = summary["individual_counts"].get(category, 0) + 1
         summary["all_seen"] = list(set(summary["all_seen"]))
-        for category in summary["individual_percentages"].keys():
-            summary["individual_percentages"][category] = summary["individual_percentages"][category] / count
+        for category in summary["individual_counts"].keys():
+            summary["individual_percentages"][category] = summary["individual_counts"][category] / count
         summary["individual_percentages_sum"] = sum(summary["individual_percentages"].values())
-        for category in summary["joint_percentages"].keys():
-            summary["joint_percentages"][category] = summary["joint_percentages"][category] / count
+        for category in summary["joint_counts"].keys():
+            summary["joint_percentages"][category] = summary["joint_counts"][category] / count
         summary["joint_percentages_sum"] = sum(summary["joint_percentages"].values())
+        for category in summary["joint_ordered_counts"].keys():
+            summary["joint_ordered_percentages"][category] = summary["joint_ordered_counts"][category] / count
+        summary["joint_ordered_percentages_sum"] = sum(summary["joint_ordered_percentages"].values())
         return summary
 
 
