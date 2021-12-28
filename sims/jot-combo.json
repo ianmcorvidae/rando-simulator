@@ -1,9 +1,8 @@
 {"version": 1,
  "simulations": [
-	 {"type": "weighted-random", "first-choices": ["black_omen", "ocean_palace", "tyrano_lair", "magus_castle", "carpenter", "snail_stop", "cathedral", "castle", "burrow_left", "forged_masamune", "burrow", "zenan", "reptite_lair", "dactyl_nest", "desert", "heckran", "denadoro", "giants_claw", "proto_dome", "arris_dome", "sun_palace", "trial", "sunstone", "geno_dome", "mt_woe"], "label": "Fixed Order"},
-	 {"type": "weighted-random", "first-choices": ["cathedral", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 20},
-	 {"type": "weighted-random", "label": "Pure Random", "count": 20},
-	 {"type": "weighted-random", "first-choices": ["cathedral"], "count": 20}
+	 {"type": "weighted-random", "first-choices": ["black_omen", "ocean_palace", "tyrano_lair", "magus_castle", "carpenter", "snail_stop", "cathedral", "castle", "burrow_left", "forged_masamune", "burrow", "zenan", "reptite_lair", "dactyl_nest", "desert", "heckran", "denadoro", "giants_claw", "proto_dome", "arris_dome", "sun_palace", "trial", "sunstone", "geno_dome", "mt_woe"], "label": "Fixed Order", "count": 200},
+	 {"type": "weighted-random", "first-choices": ["cathedral", "forged_masamune", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 200},
+	 {"type": "weighted-random", "label": "Pure Random", "count": 200}
  ],
  "end-states": ["black_omen", "ocean_palace"],
  "reports": [

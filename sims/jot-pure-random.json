@@ -1,5 +1,5 @@
 {"version": 1,
- "simulations": [{"type": "weighted-random", "label": "Pure Random", "count": 20}],
+ "simulations": [{"type": "weighted-random", "label": "Pure Random", "count": 200}],
  "end-states": ["black_omen", "ocean_palace"],
  "reports": [
    {"label": "Go Mode",

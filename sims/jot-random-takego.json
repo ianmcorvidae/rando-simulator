@@ -1,5 +1,5 @@
 {"version": 1,
- "simulations": [{"type": "weighted-random", "first-choices": ["cathedral", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 20}],
+ "simulations": [{"type": "weighted-random", "first-choices": ["cathedral", "forged_masamune", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 200}],
  "end-states": ["black_omen", "ocean_palace"],
  "reports": [
    {"label": "Go Mode",
