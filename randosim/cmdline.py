@@ -1,6 +1,7 @@
 import argparse
 import json
 import multiprocessing
+import os
 
 from . import summary
 from . import simulation
@@ -14,23 +15,18 @@ def cmdline():
     # string for this one, we'll open each one in the loop
     parser.add_argument('choices', help="The file(s) describing randomized choices to use for simulating", nargs='*')
     args = parser.parse_args()
-    print(args)
     base = parse_file(args.base)
     sim = parse_file(args.simulation)
-    print(base)
-    print(sim)
     if len(args.choices) == 0:
         summary.summarize_options(base)
     else:
-        import pprint
-        with multiprocessing.Pool() as pool:
+        with multiprocessing.Pool(max(1, os.cpu_count() - 2)) as pool:
             simulator = simulation.RandomizerSimulator(args.choices, base, sim, pool=pool)
             simulator.run()
+        print(json.dumps(simulator.reports))
+        import pprint
         for f in simulator.reports["files"].keys():
             for s in simulator.reports["files"][f]["simulations"].keys():
-                #for k in simulator.reports["files"][f]["simulations"][s].keys():
-                #    if isinstance(k, int):
-                #        print(", ".join(simulator.reports["files"][f]["simulations"][s][k]["choices"]), simulator.reports["files"][f]["simulations"][s][k]["Go Mode"])
                 for r in simulator.reports["files"][f]["simulations"][s]["summary"].keys():
                     print(f + "\t" + s + "\t" + r)
                     pprint.pprint(simulator.reports["files"][f]["simulations"][s]["summary"][r], compact=True)

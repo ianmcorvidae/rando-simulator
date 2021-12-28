@@ -13,7 +13,6 @@ class WeightedRandomSimulation:
     def choose(self, available):
         for choice in self.first_choices:
             if choice in available:
-                print(">> found first-choice option: " + choice)
                 return choice
         if len(self.weights.keys()) == 0:
             return random.choice(available)
@@ -33,12 +32,9 @@ def get_sim(simulation):
 def meets_and_req(req, unlocks, found):
     met_reqs = []
     for r in req:
-        #print("AND req: checking", r, unlocks, found)
         if isinstance(r, str) and ((r in unlocks) or (r in found)):
-            #print(">> " + r + " in unlocks or found")
             met_reqs.append(r)
         elif isinstance(r, list) and meets_or_req(r, unlocks, found):
-            #print(">> " + ", ".join(r) + " or req met by unlocks/found")
             met_reqs.append(r)
     return (len(req) == len(met_reqs))
 
@@ -46,13 +42,11 @@ def meets_or_req(req, unlocks, found):
     met_req = False
     for r in req:
         if isinstance(r, str) and ((r in unlocks) or (r in found)):
-            #print(">> " + r + " in unlocks or found")
             met_req = True
             break
         elif isinstance(r, list):
             f = meets_and_req(r, unlocks, found)
             if f:
-                #print(">> " + ", ".join(r) + " and req met by unlocks/found")
                 met_req = f
                 break
     return met_req
@@ -136,7 +130,7 @@ class QualitativeReport:
         count = len(raw_data)
         for run in raw_data:
             summary["all_seen"].extend(run)
-            summary["joint_percentages"][tuple(sorted(run))] = summary["joint_percentages"].get(tuple(sorted(run)), 0) + 1
+            summary["joint_percentages"]["::".join(sorted(run))] = summary["joint_percentages"].get("::".join(sorted(run)), 0) + 1
             for category in run:
                 summary["individual_percentages"][category] = summary["individual_percentages"].get(category, 0) + 1
         summary["all_seen"] = list(set(summary["all_seen"]))
@@ -171,7 +165,7 @@ class SimulationSingle:
 
         self._init_reports()
         self._init_lists()
-        if opts.get("summarize", True):
+        if opts.get("summarize", False):
             self.summarize() 
 
     def _init_reports(self):
@@ -219,30 +213,24 @@ class SimulationSingle:
             if 'requirements' in unlockable:
                 req = unlockable["requirements"]
                 if isinstance(req, str) and ((req in unlocks) or (req in found)):
-                    #print(">> " + unlockable_name + " requires only " + req + " which we have, adding")
                     u.append(unlockable_name)
                 elif isinstance(req, list):
                     if meets_and_req(req, unlocks, found):
-                        #print(">> " + unlockable_name + " requires " + ", ".join(req) + " which we have, adding")
                         u.append(unlockable_name)
                 elif isinstance(req, dict):
                     if ("and" in req) and ("or" not in req):
                         # and-only, probably with nested or
                         if meets_and_req(req["and"], unlocks, found):
-                            #print(">> " + unlockable_name, req)
                             u.append(unlockable_name)
                     elif ("or" in req) and ("and" not in req):
                         # or-only, maybe with nested ands
                         if meets_or_req(req["or"], unlocks, found):
-                            #print(">> " + unlockable_name, req)
                             u.append(unlockable_name)
                     elif ("or" in req) and ("and" in req):
                         # both parts
                         if meets_and_req(req["and"], unlocks, found) and meets_or_req(req["or"], unlocks, found):
-                            #print(">> " + unlockable_name, req)
                             u.append(unlockable_name)
             else:
-                #print(">> " + unlockable_name + " has no requirements, adding")
                 u.append(unlockable_name)
         return u
 
@@ -261,7 +249,7 @@ class SimulationSingle:
         f = self._found_findables(unlocks)
         changed_f = (len(f) != len(found))
 
-        if self.opts.get("summarize", True):
+        if self.opts.get("summarize", False):
             if changed_u1:
                 new = set(u1) - set(unlocks)
                 print("New unlocks:     " + ", ".join(new))
@@ -275,7 +263,7 @@ class SimulationSingle:
                 print("New findables:   " + ", ".join(new))
 
         if changed_u1 or changed_u2 or changed_f:
-            print("  ...")
+            #print("  ...") if self.opts.get("summarize", False)
             (f, u1, u2) = self._updated_lists(f, u1, u2)
 
         return (f, u1, u2)
@@ -295,17 +283,16 @@ class SimulationSingle:
 
     def run(self):
         while len([e for e in self.sim["end-states"] if e in self.unlocks]) == 0:
-            print("----------")
+            #print("----------") if self.opts.get("summarize", False)
             next_unlock = self.choose_unlockable()
-            print("Next unlock: " + next_unlock)
+            #print("Next unlock: " + next_unlock) if self.opts.get("summarize", False)
             self.unlocks.append(next_unlock)
             self.reports["choices"].append(next_unlock)
             for hook in self.reporting_hooks['made-choice']:
                 self.reports = hook.made_choice(self.reports, next_unlock)
             self.update_lists()
-            if self.opts.get("summarize", True):
-                self.summarize()
-        print("==========")
+            #self.summarize() if self.opts.get("summarize", False)
+        #print("==========") if self.opts.get("summarize", False)
         self._update_choice_count()
 
 def simulation_label(simulation, sim):
@@ -345,7 +332,6 @@ class SimulationRun:
             for i in range(len(runs)):
                 run = runs[i]
                 run.run()
-                #print(run.reports)
                 self.reports[i] = run.reports
                 for r in self.sim["reports"]:
                     # raw data across all runs of a simulation in a single file
@@ -368,7 +354,7 @@ class FileSimulator:
         self.opts = opts
         with open(fname, 'r') as f:
             self.choices = parse_file(f)
-        if opts.get("summarize", True):
+        if opts.get("summarize", False):
             summary.summarize_options(self.base, choices=self.choices)
 
     def simulation(self, index):
@@ -418,7 +404,6 @@ class RandomizerSimulator:
                     label = simulation_label(simulation, self.sim)
                     self.reports["simulations"][label]["raw"][r["label"]] = summarizer.combine_files(self.reports, r["label"], label)
                     self.reports["simulations"][label]["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["simulations"][label]["raw"][r["label"]])
-                    #print("would combine across files for simulation here", label, r["label"])
                 # raw and summary data across all runs of all simulations across all files
                 # [raw][<report label>] and [summary][<report label>]
                 self.reports["raw"][r["label"]] = summarizer.combine_simulations(self.reports, r["label"])
