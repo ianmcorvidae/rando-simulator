@@ -311,14 +311,19 @@ class SimulationSingle:
 def simulation_label(simulation, sim):
     return simulation.get("label", str(sim["simulations"].index(simulation)))
 
+def sim_report(simulation_single):
+    simulation_single.run()
+    return simulation_single.reports
+
 class SimulationRun:
-    def __init__(self, base, sim, simulation, choices, opts={}):
+    def __init__(self, base, sim, simulation, choices, pool=None, opts={}):
         self.reports = {"raw": {}, "summary": {}}
         self.base = base
         self.sim = sim
         self.simulation = simulation
         self.choices = choices
         self.opts = opts
+        self.pool = pool
         self.label = simulation_label(self.simulation, self.sim)
 
     def run(self):
@@ -326,15 +331,26 @@ class SimulationRun:
         #self.reports[simulation_label] = self.reports.get(simulation_label, {})
         for r in self.sim["reports"]:
             self.reports["raw"][r["label"]] = []
+        runs = []
         for i in range(self.simulation.get("count", 1)):
             run = SimulationSingle(self.base, self.sim, self.simulation, self.choices, self.opts)
-            run.run()
-            #print(run.reports)
-            self.reports[i] = run.reports
-            for r in self.sim["reports"]:
-                # raw data across all runs of a simulation in a single file
-                # [raw][<report label>]
-                self.reports["raw"][r["label"]].append(run.reports[r["label"]])
+            runs.append(run)
+        if self.pool is not None:
+            res = self.pool.map(sim_report, runs)
+            for i in range(len(runs)):
+                self.reports[i] = res[i] 
+                for r in self.sim["reports"]:
+                    self.reports["raw"][r["label"]].append(res[i][r["label"]])
+        else:
+            for i in range(len(runs)):
+                run = runs[i]
+                run.run()
+                #print(run.reports)
+                self.reports[i] = run.reports
+                for r in self.sim["reports"]:
+                    # raw data across all runs of a simulation in a single file
+                    # [raw][<report label>]
+                    self.reports["raw"][r["label"]].append(run.reports[r["label"]])
         for r in self.sim["reports"]:
             summarizer = get_report(r)
             if summarizer is not None:
@@ -343,11 +359,12 @@ class SimulationRun:
                 self.reports["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["raw"][r["label"]])
 
 class FileSimulator:
-    def __init__(self, fname, base, sim, opts={}):
+    def __init__(self, fname, base, sim, pool=None, opts={}):
         self.reports = {"simulations": {}, "raw": {}, "summary": {}}
         self.fname = fname
         self.base = base
         self.sim = sim
+        self.pool = pool
         self.opts = opts
         with open(fname, 'r') as f:
             self.choices = parse_file(f)
@@ -355,7 +372,7 @@ class FileSimulator:
             summary.summarize_options(self.base, choices=self.choices)
 
     def simulation(self, index):
-        return SimulationRun(self.base, self.sim, self.sim["simulations"][index], self.choices, self.opts)
+        return SimulationRun(self.base, self.sim, self.sim["simulations"][index], self.choices, self.pool, self.opts)
 
     def run(self):
         for s in range(len(self.sim["simulations"])):
@@ -372,15 +389,16 @@ class FileSimulator:
                 self.reports["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["raw"][r["label"]])
 
 class RandomizerSimulator:
-    def __init__(self, choice_files, base, sim, opts={}):
+    def __init__(self, choice_files, base, sim, pool=None, opts={}):
         self.reports = {"files": {}, "simulations": {}, "raw": {}, "summary": {}}
         self.filenames = choice_files
         self.base = base
         self.sim = sim
+        self.pool = pool
         self.opts = opts
 
     def file_simulator(self, file_index):
-        return FileSimulator(self.filenames[file_index], self.base, self.sim, self.opts)
+        return FileSimulator(self.filenames[file_index], self.base, self.sim, self.pool, self.opts)
 
     def run(self):
         for file_index in range(len(self.filenames)):

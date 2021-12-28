@@ -1,9 +1,11 @@
 import argparse
 import json
+import multiprocessing
 
 from . import summary
 from . import simulation
 from .parse_file import parse_file
+
 
 def cmdline():
     parser = argparse.ArgumentParser(description="Simulate playing through a randomized game, gathering statistics.")
@@ -21,8 +23,9 @@ def cmdline():
         summary.summarize_options(base)
     else:
         import pprint
-        simulator = simulation.RandomizerSimulator(args.choices, base, sim)
-        simulator.run()
+        with multiprocessing.Pool() as pool:
+            simulator = simulation.RandomizerSimulator(args.choices, base, sim, pool=pool)
+            simulator.run()
         for f in simulator.reports["files"].keys():
             for s in simulator.reports["files"][f]["simulations"].keys():
                 #for k in simulator.reports["files"][f]["simulations"][s].keys():
