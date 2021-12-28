@@ -1,5 +1,6 @@
 import random
 import copy
+import sys
 
 from . import summary
 from .parse_file import parse_file
@@ -316,6 +317,7 @@ class SimulationRun:
     def run(self):
         #simulation_label = self.simulation.get("label", str(self.sim["simulations"].index(simulation)))
         #self.reports[simulation_label] = self.reports.get(simulation_label, {})
+        print("SIM: " + simulation_label(self.simulation, self.sim),file=sys.stderr)
         for r in self.sim["reports"]:
             self.reports["raw"][r["label"]] = []
         runs = []
@@ -361,6 +363,7 @@ class FileSimulator:
         return SimulationRun(self.base, self.sim, self.sim["simulations"][index], self.choices, self.pool, self.opts)
 
     def run(self):
+        print("FILE: " + self.fname,file=sys.stderr)
         for s in range(len(self.sim["simulations"])):
             simulation = self.simulation(s)
             label = simulation.label

@@ -2,6 +2,7 @@ import argparse
 import json
 import multiprocessing
 import os
+import sys
 
 from . import summary
 from . import simulation
@@ -28,17 +29,17 @@ def cmdline():
         for f in simulator.reports["files"].keys():
             for s in simulator.reports["files"][f]["simulations"].keys():
                 for r in simulator.reports["files"][f]["simulations"][s]["summary"].keys():
-                    print(f + "\t" + s + "\t" + r)
-                    pprint.pprint(simulator.reports["files"][f]["simulations"][s]["summary"][r], compact=True)
-                    print("----------")
+                    print(f + "\t" + s + "\t" + r, file=sys.stderr)
+                    pprint.pprint(simulator.reports["files"][f]["simulations"][s]["summary"][r], compact=True, stream=sys.stderr)
+                    print("----------", file=sys.stderr)
         for s in simulator.reports["simulations"].keys():
             for r in simulator.reports["simulations"][s]["summary"].keys():
-                print("<all files>\t" + s + "\t" + r)
-                pprint.pprint(simulator.reports["simulations"][s]["summary"][r], compact=True)
-                print("----------")
+                print("<all files>\t" + s + "\t" + r, file=sys.stderr)
+                pprint.pprint(simulator.reports["simulations"][s]["summary"][r], compact=True, stream=sys.stderr)
+                print("----------", file=sys.stderr)
         for r in simulator.reports["summary"].keys():
-            print("<all files>\t<all simulations>\t" + r)
-            pprint.pprint(simulator.reports["summary"][r], compact=True)
-            print("----------")
+            print("<all files>\t<all simulations>\t" + r, file=sys.stderr)
+            pprint.pprint(simulator.reports["summary"][r], compact=True, stream=sys.stderr)
+            print("----------", file=sys.stderr)
 
         #print(simulator.reports)
