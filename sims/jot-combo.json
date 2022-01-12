@@ -1,6 +1,7 @@
 {"version": 1,
  "simulations": [
 	 {"type": "weighted-random", "first-choices": ["black_omen", "ocean_palace", "tyrano_lair", "magus_castle", "carpenter", "snail_stop", "cathedral", "castle", "burrow_left", "forged_masamune", "burrow", "zenan", "reptite_lair", "dactyl_nest", "desert", "heckran", "denadoro", "giants_claw", "proto_dome", "arris_dome", "sun_palace", "trial", "sunstone", "geno_dome", "mt_woe"], "label": "Fixed Order", "count": 200},
+	 {"type": "weighted-random", "weights": {"castle": 100000, "burrow_left": 100000, "burrow": 10000, "zenan": 10000, "reptite_lair": 10000, "dactyl_nest": 1000, "desert": 1000, "heckran": 1000, "denadoro": 1000, "giants_claw": 1000, "proto_dome": 100, "arris_dome": 100, "sun_palace": 100, "trial": 10, "sunstone": 1, "geno_dome": 1, "mt_woe": 1}, "first-choices": ["cathedral", "snail_stop", "carpenter", "forged_masamune", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Fixed Order (1:10 weighted random tiers)", "count": 200},
 	 {"type": "weighted-random", "first-choices": ["cathedral", "forged_masamune", "black_omen", "ocean_palace", "tyrano_lair", "magus_castle"], "label": "Pure Random (after cathedral, take first go mode)", "count": 200},
 	 {"type": "weighted-random", "label": "Pure Random", "count": 200}
  ],
@@ -17,6 +18,13 @@
     "categories": {
       "tyrano": {"and": [{"type": "got-findable", "findable": "gate_key"}, {"type": "got-findable", "findable": "ruby_knife"}, {"type": "got-findable", "findable": "dreamstone"}]},
       "magus": {"and": [{"type": "got-findable", "findable": "frog"}, {"type": "got-findable", "findable": "blade"}, {"type": "got-findable", "findable": "hilt"}]},
-      "omen": {"and": [{"type": "got-findable", "findable": "pendant"}, {"type": "got-findable", "findable": "chrono_trigger"}, {"type": "got-findable", "findable": "clone"}]}}}
+      "omen": {"and": [{"type": "got-findable", "findable": "pendant"}, {"type": "got-findable", "findable": "chrono_trigger"}, {"type": "got-findable", "findable": "clone"}]}}},
+   {"label": "Notable Choices",
+    "type": "qualitative",
+    "categories": {
+      "woe": {"type": "made-choice", "choice": "mt_woe"},
+      "geno": {"type": "made-choice", "choice": "geno_dome"},
+      "sunstone": {"type": "made-choice", "choice": "sunstone"}
+    }}
  ]
 }

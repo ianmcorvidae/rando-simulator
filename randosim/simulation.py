@@ -30,23 +30,26 @@ def get_sim(simulation):
 
 ### Checking unlockable requirements
 
-def meets_and_req(req, unlocks, found):
+def _strmet(reqstr, got):
+    return reqstr in got
+
+def meets_and_req(req, got):
     met_reqs = []
     for r in req:
-        if isinstance(r, str) and ((r in unlocks) or (r in found)):
+        if isinstance(r, str) and _strmet(r, got):
             met_reqs.append(r)
-        elif isinstance(r, list) and meets_or_req(r, unlocks, found):
+        elif isinstance(r, list) and meets_or_req(r, got):
             met_reqs.append(r)
     return (len(req) == len(met_reqs))
 
-def meets_or_req(req, unlocks, found):
+def meets_or_req(req, got):
     met_req = False
     for r in req:
-        if isinstance(r, str) and ((r in unlocks) or (r in found)):
+        if isinstance(r, str) and _strmet(r, got):
             met_req = True
             break
         elif isinstance(r, list):
-            f = meets_and_req(r, unlocks, found)
+            f = meets_and_req(r, got)
             if f:
                 met_req = f
                 break
@@ -168,6 +171,7 @@ class SimulationSingle:
         self.choices = choices
         self.opts = opts
 
+        self._initf = None
         self.found = []
         self.unlocks = []
         self.unlockables = []
@@ -187,8 +191,13 @@ class SimulationSingle:
                 if hook_type in report.supported_hooks:
                     self.reporting_hooks[hook_type].append(report)
 
+    def _initial_found(self):
+        if self._initf is None:
+            self._initf = [self.choices[k] for k in self.base["initial"].keys()]
+        return self._initf
+
     def _init_lists(self):
-        self.found = [self.choices[k] for k in self.base["initial"].keys()]
+        self.found = self._initial_found()
         for hook in self.reporting_hooks['found']:
             for findable in self.found:
                 self.reports = hook.found(self.reports, findable)
@@ -203,7 +212,7 @@ class SimulationSingle:
         print("Found:     " + ", ".join(self.found))
 
     def _found_findables(self, unlocks):
-        return [self.choices[k] for k in self.base["initial"].keys()] + [self.choices[k] for k in unlocks if k in self.choices]
+        return self._initial_found() + [self.choices[k] for k in unlocks if k in self.choices]
 
     def _findable_unlocks(self, found, unlocks):
         u = []
@@ -219,27 +228,28 @@ class SimulationSingle:
 
     def _find_unlockables(self, unlocks, found):
         u = []
-        for unlockable_name in self.base["unlockables"].keys():
-            unlockable = self.base["unlockables"][unlockable_name]
+        got = set(unlocks) | set(found)
+        for unlockable_name, unlockable in self.base["unlockables"].items():
+            #unlockable = self.base["unlockables"][unlockable_name]
             if 'requirements' in unlockable:
                 req = unlockable["requirements"]
-                if isinstance(req, str) and ((req in unlocks) or (req in found)):
+                if isinstance(req, str) and _strmet(req, got):
                     u.append(unlockable_name)
                 elif isinstance(req, list):
-                    if meets_and_req(req, unlocks, found):
+                    if meets_and_req(req, got):
                         u.append(unlockable_name)
                 elif isinstance(req, dict):
                     if ("and" in req) and ("or" not in req):
                         # and-only, probably with nested or
-                        if meets_and_req(req["and"], unlocks, found):
+                        if meets_and_req(req["and"], got):
                             u.append(unlockable_name)
                     elif ("or" in req) and ("and" not in req):
                         # or-only, maybe with nested ands
-                        if meets_or_req(req["or"], unlocks, found):
+                        if meets_or_req(req["or"], got):
                             u.append(unlockable_name)
                     elif ("or" in req) and ("and" in req):
                         # both parts
-                        if meets_and_req(req["and"], unlocks, found) and meets_or_req(req["or"], unlocks, found):
+                        if meets_and_req(req["and"], got) and meets_or_req(req["or"], got):
                             u.append(unlockable_name)
             else:
                 u.append(unlockable_name)
@@ -250,14 +260,16 @@ class SimulationSingle:
         u1 = copy.copy(unlocks)
         u2 = copy.copy(unlockables)
 
-        u1.extend(self._findable_unlocks(found, unlocks))
-        u1 = list(set(u1))
+        new_u1 = self._findable_unlocks(found, unlocks)
+        u1 = u1 + list(set(new_u1) - set(u1))
         changed_u1 = (len(u1) != len(unlocks))
 
-        u2 = self._find_unlockables(unlocks, found)
-        changed_u2 = (len(u2) != len(unlockables))
+        new_u2 = self._find_unlockables(unlocks, found)
+        u2 = u2 + list(set(new_u2) - set(u2))
+        changed_u2 = (len(u2) != len(new_u2))
 
-        f = self._found_findables(unlocks)
+        new_f = self._found_findables(unlocks)
+        f = f + list(set(new_f) - set(f))
         changed_f = (len(f) != len(found))
 
         if self.opts.get("summarize", False):
