@@ -11,10 +11,15 @@ from .parse_file import parse_file
 
 def cmdline():
     parser = argparse.ArgumentParser(description="Simulate playing through a randomized game, gathering statistics.")
-    parser.add_argument('base', help="The base game description file", type=argparse.FileType('r'))
-    parser.add_argument('simulation', help="The file specifying the simulation to run", type=argparse.FileType('r'))
+    sub = parser.add_subparsers()
+
+    analyze = sub.add_parser('analyze', help="Analyze some files")
+    analyze.add_argument('-b', '--base', help="The base game description file", type=argparse.FileType('r'), required=True)
+    analyze.add_argument('-s', '--simulation', help="The file specifying the simulation to run", type=argparse.FileType('r'), required=True)
+    #analyze.add_argument('-d', '--database', help="The sqlite database file to store results in.", required=False)
     # string for this one, we'll open each one in the loop
-    parser.add_argument('choices', help="The file(s) describing randomized choices to use for simulating", nargs='*')
+    analyze.add_argument('choices', help="The file(s) describing randomized choices to use for simulating", nargs='*')
+
     args = parser.parse_args()
     base = parse_file(args.base)
     sim = parse_file(args.simulation)
