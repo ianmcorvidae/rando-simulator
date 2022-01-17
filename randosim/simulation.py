@@ -398,6 +398,7 @@ class FileSimulator:
                 # [raw][<report label>] and [summary][<report label>]
                 self.reports["raw"][r["label"]] = summarizer.combine_simulations(self.reports, r["label"])
                 self.reports["summary"][r["label"]] = summarizer.summarize_raw_data(self.reports["raw"][r["label"]])
+        sys.stderr.flush()
 
 class RandomizerSimulator:
     def __init__(self, choice_files, base, sim, pool=None, opts={}):
